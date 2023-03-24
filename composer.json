@@ -1,7 +1,6 @@
 {
     "name": "jerome-rdlv/translation-update",
     "description": "A wp-cli command to extract texts from a plugin or theme, and update POT, PO and MO files",
-    "type": "wordpress-muplugin",
     "license": "MIT",
     "authors": [
         {
@@ -11,5 +10,10 @@
     ],
     "require": {
         "php": ">=7.0"
+    },
+    "autoload": {
+        "files": [
+            "index.php"
+        ]
     }
 }
