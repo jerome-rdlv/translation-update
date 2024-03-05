@@ -22,9 +22,19 @@ class TranslationCommand
 {
     /**
      * Extract translations from source and update corresponding POT, PO and MO files.
-     * All options are passed to `wp i18n make-pot`
+     * Except from [--plugin] and [--theme], all options are passed to `wp i18n make-pot`
      *
-     * <source_path>
+     * [--plugin=<name>]
+     * : Plugin strings will be extracted, resulting POT file will be created in global languages dir
+     *
+     * [--theme=<name>]
+     * : Theme strings will be extracted, resulting POT file will be created in global languages dir
+     *
+     * [<source>]
+     * : The source directory to extract from
+     *
+     * [<destination>]
+     * : The path of the generated POT file
      *
      * @param $args
      * @param $assoc
@@ -39,6 +49,24 @@ class TranslationCommand
             'POT-Creation-Date' => 'GIT',
         ];
 
+        if (isset($assoc['plugin'])) {
+            if (!empty($args)) {
+                WP_CLI::error('You can’t use <source> argument and --plugin option at the same time.');
+            }
+            $plugin = $assoc['plugin'];
+            unset($assoc['plugin']);
+            $args[0] = sprintf('%s/%s', WP_PLUGIN_DIR, $plugin);
+            $args[1] = sprintf('%s/plugins/%s.pot', WP_LANG_DIR, $this->getPluginData($plugin)['TextDomain'] ?? $plugin);
+        } elseif (isset($assoc['theme'])) {
+            if (!empty($args)) {
+                WP_CLI::error('You can’t use <source> argument and --theme option at the same time.');
+            }
+            $theme = wp_get_theme($assoc['theme']);
+            unset($assoc['theme']);
+            $args[0] = $theme->get_stylesheet_directory();
+            $args[1] = sprintf('%s/themes/%s.pot', WP_LANG_DIR, $theme->get('TextDomain') ?? $theme->get_stylesheet());
+        }
+
         $assoc = array_merge(
             [
                 'headers' => json_encode($headers),
@@ -51,13 +79,13 @@ class TranslationCommand
             'i18n make-pot --debug %s %s',
             implode(' ', array_map(function ($arg, $value) {
                 return is_bool($value)
-                    ? sprintf($value ? '--no-%s' : '--%s', $arg)
+                    ? sprintf($value ? '--%s' : '--no-%s', $arg)
                     : sprintf('--%s="%s"', $arg, addslashes($value));
             }, array_keys($assoc), $assoc)),
             implode(' ', $args),
         );
 
-        $output = WP_CLI::runcommand($command, ['return' => 'all']);
+        $output = WP_CLI::runcommand($command, ['return' => 'all', 'exit_error' => false]);
 
         echo preg_replace('/^Debug \([^\)]+\): .*$\n?/m', '', $output->stderr);
         echo $output->stdout . "\n";
@@ -98,5 +126,15 @@ class TranslationCommand
                 return $headers[$m[1]] !== null;
             }))
         );
+    }
+
+    private function getPluginData(string $name): ?array
+    {
+        foreach (get_plugins() as $path => $data) {
+            if (dirname($path) === $name) {
+                return $data;
+            }
+        }
+        return null;
     }
 }
