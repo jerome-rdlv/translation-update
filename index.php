@@ -29,6 +29,9 @@ class TranslationCommand
      *
      * [--theme=<name>]
      * : Theme strings will be extracted, resulting POT file will be created in global languages dir
+     * 
+     * [--merge=<path>]
+     * : Comma-separated list of POT files whose contents should be merged with the extracted strings
      *
      * [<source>]
      * : The source directory to extract from
